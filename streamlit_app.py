@@ -9,39 +9,95 @@ from scripts.data_clean_utils import perform_data_cleaning
 # Set up MLflow Tracking URI
 mlflow.set_tracking_uri("https://dagshub.com/MohammoD2/food_delivery_time_prediction.mlflow")
 
-# Load model information
-def load_model_information(file_path):
-    with open(file_path) as f:
+# Page Configuration
+st.set_page_config(
+    page_title="Food Delivery Time Prediction",
+    page_icon="🍔",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# Add custom CSS for styling (inline)
+st.markdown(
+    """
+    <style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f9f9f9;
+    }
+    .header {
+        text-align: center;
+        color: #333;
+    }
+    .header h1 {
+        color: #ff5733;
+        font-size: 2.5rem;
+    }
+    .header p {
+        font-size: 1.2rem;
+        color: #555;
+    }
+    .footer {
+        text-align: center;
+        margin-top: 50px;
+        color: #888;
+        font-size: 0.9rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Preload model and preprocessor
+@st.cache_resource
+def preload_resources():
+    with open("run_information.json") as f:
         run_info = json.load(f)
-    return run_info
+    model_name = run_info['model_name']
+    stage = "staging"
+    model_path = f"models:/{model_name}/{stage}"
 
-# Load the model transformer
-def load_transformer(transformer_path):
-    transformer = joblib.load(transformer_path)
-    return transformer
+    # Load the model
+    model = mlflow.sklearn.load_model(model_path)
 
-# Load the pre-trained model
-model_name = load_model_information("run_information.json")['model_name']
-stage = "staging"
-model_path = f"models:/{model_name}/{stage}"
-model = mlflow.sklearn.load_model(model_path)
+    # Load the preprocessor
+    preprocessor = joblib.load("models/preprocessor.joblib")
 
-# Load the preprocessor
-preprocessor = load_transformer("models/preprocessor.joblib")
+    # Create a prediction pipeline
+    model_pipe = Pipeline(steps=[
+        ('preprocess', preprocessor),
+        ('regressor', model)
+    ])
+    return model_pipe
 
-# Create a prediction pipeline
-model_pipe = Pipeline(steps=[
-    ('preprocess', preprocessor),
-    ('regressor', model)
-])
+# Load resources once
+model_pipe = preload_resources()
 
-# Streamlit App
-st.title("Swiggy Food Delivery Time Prediction")
+# HTML Header and Styling
+st.markdown(
+    """
+    <div class="header">
+        <h1>🍔 Food Delivery Time Prediction App</h1>
+        <p>Predict delivery times with precision and speed!</p>
+    </div>
+    <hr>
+    """,
+    unsafe_allow_html=True,
+)
 
-st.write("This application predicts the delivery time for Swiggy orders.")
+# Sidebar
+st.sidebar.title("Navigation")
+st.sidebar.info(
+    """
+    Use this app to predict food delivery times.
+    - Input the required fields
+    - Click **Predict** to get the estimated delivery time
+    """
+)
 
 # Input Form
 with st.form("prediction_form"):
+    st.markdown("<h2>Enter Delivery Details</h2>", unsafe_allow_html=True)
     ID = st.text_input("ID", value="1")
     Delivery_person_ID = st.text_input("Delivery Person ID", value="1001")
     Delivery_person_Age = st.text_input("Delivery Person Age", value="30")
@@ -90,11 +146,22 @@ if submitted:
         'City': [City]
     })
 
-    # Perform data cleaning
+    # Perform data cleaning (ensure this function is efficient)
     cleaned_data = perform_data_cleaning(input_data)
 
-    # Make prediction
+    # Predict
     prediction = model_pipe.predict(cleaned_data)[0]
 
     st.success(f"Predicted Delivery Time: {prediction:.2f} minutes")
+
+# Footer
+st.markdown(
+    """
+    <div class="footer">
+        <p>Made with ❤️ by MohammoD2</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 
