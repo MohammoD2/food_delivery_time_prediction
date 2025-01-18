@@ -158,7 +158,7 @@ if submitted:
 st.markdown(
     """
     <div class="footer">
-        <p>Made with ❤️ by MohammoD2</p>
+        <p>Made with ❤️ by Mohammod Ibrahim Hossain</p>
     </div>
     """,
     unsafe_allow_html=True,
